@@ -1,6 +1,6 @@
 import React, { useReducer, useState, useEffect, useRef, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Coins, Info, X, RotateCcw, Copy, Check, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Coins, Info, X, RotateCcw, Copy, Check, ChevronRight, AlertTriangle, Share2 } from 'lucide-react';
 
 /* =========================================================================
    定数
@@ -120,6 +120,7 @@ const SOURCE_TEXT = '出典: 令和4年版厚生労働白書（厚生労働省, 
 const CREDIT = '@YukiKataoka3';
 const X_URL = 'https://x.com/YukiKataoka3';
 const GITHUB_URL = 'https://github.com/youkiti/medical-defense-2050';
+const SITE_URL = 'https://youkiti.github.io/medical-defense-2050/';
 
 /* =========================================================================
    純粋関数
@@ -317,14 +318,29 @@ function createGameState(difficulty, seed, testMode = false) {
   return s;
 }
 
+// シェアされたチャレンジURL（?d=難易度&seed=番号）を解析する。
+// seed が不正・欠落なら挑戦状なし扱い。d が不正なら normal にフォールバック。
+function parseChallengeFromUrl() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const seed = parseSeed(params.get('seed') || '');
+    if (seed === undefined) return null;
+    const d = params.get('d');
+    return { seed, difficulty: DIFFICULTY_CONFIG[d] ? d : 'normal' };
+  } catch {
+    return null;
+  }
+}
+
 function initialAppState() {
-  return { screen: 'title' };
+  return { screen: 'title', challenge: parseChallengeFromUrl() };
 }
 
 function reducer(state, action) {
   switch (action.type) {
     case 'GO_DIFFICULTY':
-      return { screen: 'difficulty' };
+      return { screen: 'difficulty', challenge: state.challenge || null };
 
     case 'START_GAME':
       return createGameState(
@@ -593,15 +609,36 @@ function worstLane(state) {
   return state.history[state.history.length - 1].worstLane || null;
 }
 
+// 各ターンのひっ迫度を絵文字1個に変換した年表（Wordle風のリザルト共有用）
+function buildEmojiTimeline(state) {
+  const marks = state.history.map(h => (h.gauge >= 80 ? '🟥' : h.gauge >= 50 ? '🟨' : '🟩'));
+  const rows = [];
+  for (let i = 0; i < marks.length; i += 12) rows.push(marks.slice(i, i + 12).join(''));
+  return rows.join('\n');
+}
+
+// 結果に応じたシェアページのスラグ（public/share/*.html に対応）
+function shareSlug(state) {
+  if (state.result !== 'win') return 'defeat';
+  return computeScore(state).rank.toLowerCase();
+}
+
+// シェア用URL。OGP画像つきの静的シェアページを経由し、?d&seed はそのまま
+// ゲーム本体へ引き継がれる（share/*.html 内のリダイレクトが query を保持する）
+function buildChallengeUrl(state) {
+  return `${SITE_URL}share/${shareSlug(state)}.html?d=${state.difficulty}&seed=${state.initialSeed}`;
+}
+
 function buildShareText(state) {
   const diffLabel = DIFFICULTY_CONFIG[state.difficulty].label;
+  const timeline = buildEmojiTimeline(state);
   if (state.result === 'win') {
-    const { rank, maxGauge } = computeScore(state);
+    const { score, rank, maxGauge } = computeScore(state);
     const endYear = DIFFICULTY_CONFIG[state.difficulty].endYear;
-    return `#メディカルディフェンス2050 ${diffLabel}で${endYear}年までクリア！ランク${rank} / 最大ひっ迫${maxGauge}% / シード#${state.initialSeed}`;
+    return `#メディカルディフェンス2050 ${diffLabel}で${endYear}年までクリア！ランク${rank}（スコア${score}）/ 最大ひっ迫${maxGauge}%\n${timeline}\n同じ年表（シード#${state.initialSeed}）に挑戦→`;
   }
   const lastYear = state.history.length ? state.history[state.history.length - 1].year : 2025 + state.turn;
-  return `#メディカルディフェンス2050 ${diffLabel}で挑戦中……${lastYear}年、地域医療の維持が難しくなりました。最大ひっ迫100% / シード#${state.initialSeed}`;
+  return `#メディカルディフェンス2050 ${diffLabel}で挑戦……${lastYear}年、地域医療の維持が難しくなりました。\n${timeline}\n同じ年表（シード#${state.initialSeed}）でリベンジ募集→`;
 }
 
 /* =========================================================================
@@ -686,6 +723,14 @@ function GaugeMonitor({ laneGauge, year, turn, totalTurns, pp }) {
   );
 }
 
+function XLogo({ size = 15 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} fill="currentColor" aria-hidden="true">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+    </svg>
+  );
+}
+
 function SocialLinks({ className = '' }) {
   return (
     <div className={`flex items-center justify-center gap-3 ${className}`}>
@@ -697,9 +742,7 @@ function SocialLinks({ className = '' }) {
         title="X: @YukiKataoka3"
         className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition"
       >
-        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
-        </svg>
+        <XLogo />
       </a>
       <a
         href={GITHUB_URL}
@@ -717,7 +760,7 @@ function SocialLinks({ className = '' }) {
   );
 }
 
-function TitleScreen({ dispatch, onOpenHelp }) {
+function TitleScreen({ dispatch, onOpenHelp, challenge }) {
   const [taps, setTaps] = useState(0);
   return (
     <div className="min-h-full bg-gradient-to-b from-emerald-900 via-emerald-800 to-emerald-700 text-white flex flex-col">
@@ -730,11 +773,22 @@ function TitleScreen({ dispatch, onOpenHelp }) {
         <p className="text-emerald-100 text-sm mt-4 leading-relaxed">
           ニッポンの医療の脈を、<br />2050年まで絶やすな。
         </p>
+        {challenge && (
+          <button
+            onClick={() => dispatch({ type: 'START_GAME', difficulty: challenge.difficulty, seed: challenge.seed })}
+            className="mt-8 w-full max-w-xs bg-white text-emerald-900 rounded-2xl px-5 py-3 shadow-lg active:scale-95 transition-transform md2050-fade-in"
+          >
+            <span className="block text-xs text-emerald-700 font-bold mb-0.5">📮 挑戦状が届いています！</span>
+            <span className="block font-black">
+              {DIFFICULTY_CONFIG[challenge.difficulty].label}・シード#{challenge.seed} で挑む
+            </span>
+          </button>
+        )}
         <button
           onClick={() => dispatch({ type: 'GO_DIFFICULTY' })}
-          className="mt-8 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold rounded-full px-8 py-3 flex items-center gap-1 shadow-lg active:scale-95 transition-transform"
+          className={`${challenge ? 'mt-4' : 'mt-8'} bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold rounded-full px-8 py-3 flex items-center gap-1 shadow-lg active:scale-95 transition-transform`}
         >
-          はじめる <ChevronRight size={18} />
+          {challenge ? 'ふつうにはじめる' : 'はじめる'} <ChevronRight size={18} />
         </button>
         <button onClick={onOpenHelp} className="mt-4 text-emerald-200 text-sm underline underline-offset-2">
           あそびかた・出典
@@ -770,8 +824,8 @@ function todaySeed() {
   return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); // 例: 2026-07-04 → 20260704
 }
 
-function DifficultyScreen({ dispatch }) {
-  const [seedText, setSeedText] = useState('');
+function DifficultyScreen({ dispatch, challenge }) {
+  const [seedText, setSeedText] = useState(challenge ? String(challenge.seed) : '');
   const items = [
     { id: 'easy', accent: 'border-emerald-300' },
     { id: 'normal', accent: 'border-amber-300' },
@@ -1119,10 +1173,23 @@ function ResultScreen({ state, dispatch }) {
   const badLane = !win ? worstLane(state) : null;
   const data = state.history.map(h => ({ year: h.year, 需要: h.totalDemand, 処理力: h.totalCapacity }));
 
-  const handleCopy = async () => {
-    const text = buildShareText(state);
+  const shareText = buildShareText(state);
+  const shareUrl = buildChallengeUrl(state);
+  const xHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+  const lineHref = `https://line.me/R/share?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`;
+  const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
+  const handleNativeShare = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      await navigator.share({ text: shareText, url: shareUrl });
+    } catch (e) {
+      // user cancelled or share unavailable; fail silently
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch (e) {
@@ -1168,14 +1235,44 @@ function ResultScreen({ state, dispatch }) {
         </div>
       </div>
 
-      <button
-        onClick={handleCopy}
-        className="bg-white border border-emerald-200 text-emerald-800 font-bold rounded-full py-3 flex items-center justify-center gap-2 mb-3 active:scale-95 transition-transform"
-      >
-        {copied ? <Check size={16} /> : <Copy size={16} />}
-        {copied ? 'コピーしました' : '結果をコピー'}
-      </button>
-      <p className="text-center text-xs text-emerald-800/40 mb-3">シード#{state.initialSeed}（同じ番号で同じ年表を再現できます）</p>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <a
+          href={xHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-slate-900 text-white font-bold rounded-full py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          <XLogo size={14} /> でシェア
+        </a>
+        <a
+          href={lineHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-[#06C755] text-white font-bold rounded-full py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          LINEでシェア
+        </a>
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        {canNativeShare && (
+          <button
+            onClick={handleNativeShare}
+            className="bg-white border border-emerald-200 text-emerald-800 font-bold rounded-full py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          >
+            <Share2 size={16} /> その他でシェア
+          </button>
+        )}
+        <button
+          onClick={handleCopy}
+          className={`bg-white border border-emerald-200 text-emerald-800 font-bold rounded-full py-3 flex items-center justify-center gap-2 active:scale-95 transition-transform ${canNativeShare ? '' : 'col-span-2'}`}
+        >
+          {copied ? <Check size={16} /> : <Copy size={16} />}
+          {copied ? 'コピーしました' : '結果をコピー'}
+        </button>
+      </div>
+      <p className="text-center text-xs text-emerald-800/40 mb-3">
+        シェアされたリンクを開くと、同じ年表（シード#{state.initialSeed}）にそのまま挑戦できます
+      </p>
       <button
         onClick={() => dispatch({ type: 'START_GAME', difficulty: state.difficulty, seed: state.initialSeed })}
         className="bg-white border-2 border-emerald-600 text-emerald-700 font-bold rounded-full py-3 flex items-center justify-center gap-2 mb-3 active:scale-95 transition-transform"
@@ -1312,8 +1409,8 @@ export default function MedicalDefense2050() {
     <div className="w-full h-full min-h-screen flex justify-center bg-slate-200">
       <EkgStyle />
       <div className="w-full max-w-md bg-emerald-50 min-h-screen relative" style={{ fontFamily: 'system-ui, -apple-system, "Hiragino Sans", "Yu Gothic", sans-serif' }}>
-        {state.screen === 'title' && <TitleScreen dispatch={dispatch} onOpenHelp={() => setHelpOpen(true)} />}
-        {state.screen === 'difficulty' && <DifficultyScreen dispatch={dispatch} />}
+        {state.screen === 'title' && <TitleScreen dispatch={dispatch} onOpenHelp={() => setHelpOpen(true)} challenge={state.challenge} />}
+        {state.screen === 'difficulty' && <DifficultyScreen dispatch={dispatch} challenge={state.challenge} />}
         {state.screen === 'game' && <GameScreen state={state} dispatch={dispatch} />}
         {state.screen === 'result' && <ResultScreen state={state} dispatch={dispatch} />}
         {helpOpen && state.screen === 'title' && <HelpModal onClose={() => setHelpOpen(false)} />}
