@@ -118,6 +118,8 @@ const CARD_ORDER = ['support_dispatch', 'refresh_training', 'paperless_process',
 
 const SOURCE_TEXT = '出典: 令和4年版厚生労働白書（厚生労働省, 2022）、日本の将来推計人口 令和5年推計（国立社会保障・人口問題研究所, 2023）ほか。本ゲームは公的推計に基づくシミュレーションであり、将来を予測するものではありません。';
 const CREDIT = '@YukiKataoka3';
+const X_URL = 'https://x.com/YukiKataoka3';
+const GITHUB_URL = 'https://github.com/youkiti/medical-defense-2050';
 
 /* =========================================================================
    純粋関数
@@ -684,6 +686,37 @@ function GaugeMonitor({ laneGauge, year, turn, totalTurns, pp }) {
   );
 }
 
+function SocialLinks({ className = '' }) {
+  return (
+    <div className={`flex items-center justify-center gap-3 ${className}`}>
+      <a
+        href={X_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="X (旧Twitter)"
+        title="X: @YukiKataoka3"
+        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24h-6.66l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+        </svg>
+      </a>
+      <a
+        href={GITHUB_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub リポジトリ"
+        title="GitHub"
+        className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 transition"
+      >
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true">
+          <path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.33-1.76-1.33-1.76-1.09-.75.08-.73.08-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.49.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.39 1.24-3.23-.12-.31-.54-1.53.12-3.19 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 3-.4c1.02 0 2.05.14 3 .4 2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.19.77.84 1.24 1.92 1.24 3.23 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22 0 1.6-.01 2.89-.01 3.29 0 .32.22.7.83.58C20.56 22.29 24 17.79 24 12.5 24 5.87 18.63.5 12 .5Z" />
+        </svg>
+      </a>
+    </div>
+  );
+}
+
 function TitleScreen({ dispatch, onOpenHelp }) {
   const [taps, setTaps] = useState(0);
   return (
@@ -706,6 +739,7 @@ function TitleScreen({ dispatch, onOpenHelp }) {
         <button onClick={onOpenHelp} className="mt-4 text-emerald-200 text-sm underline underline-offset-2">
           あそびかた・出典
         </button>
+        <SocialLinks className="mt-6 text-emerald-100" />
       </div>
       <p className="text-center text-emerald-300/50 text-[10px] leading-relaxed px-8 pb-1 select-none">
         これはゲームであり、実際の医療政策を表すものではありません。
