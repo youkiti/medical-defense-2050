@@ -1203,6 +1203,9 @@ function ResultScreen({ state, dispatch }) {
         <EkgLine className="w-full h-10" colorClass={win ? 'stroke-emerald-500' : 'stroke-rose-400'} />
       </div>
       <div className="text-center mb-5">
+        <span className="inline-block text-xs font-bold text-emerald-800 bg-emerald-100 rounded-full px-3 py-0.5 mb-2">
+          {DIFFICULTY_CONFIG[state.difficulty].label}
+        </span>
         {win ? (
           <>
             <p className="text-xs text-emerald-700 mb-1">{DIFFICULTY_CONFIG[state.difficulty].endYear}年 到達</p>
