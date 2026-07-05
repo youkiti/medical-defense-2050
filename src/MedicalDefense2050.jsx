@@ -110,7 +110,7 @@ const CARD_DEFS = {
   return_support:{ name: '復職支援・潜在人材', cost: 10, lag: 2, desc: '看護ユニットが2名加わる', flavor: 'おかえりなさい、待ってました。' },
   foreign_care:  { name: '外国人材受け入れ', cost: 10, lag: 2, desc: '在宅・介護レーンにコメディカルが2名加わる', flavor: '世界中から、支え合う仲間が。' },
   renkei:        { name: '地域医療連携', cost: 10, lag: 1, desc: '病棟の需要の一部を在宅・介護へ振り分ける', flavor: '病院だけが、医療じゃない。' },
-  prevention:    { name: '予防・健康増進', cost: 20, lag: 10, desc: '全レーンの需要が長期的に低下（効果は10年後）', flavor: '10年後の自分への、いちばんの贈り物。' },
+  prevention:    { name: '予防・健康増進', cost: 20, lag: 5, desc: '全レーンの需要が長期的に低下（効果は5年後）', flavor: '5年後の自分への、いちばんの贈り物。' },
   care_robot:    { name: '介護ロボット・ICT', cost: 10, lag: 2, desc: '在宅・介護の処理力アップ（維持費: 毎年1PP）', flavor: '力仕事は、ロボットに任せよう。' },
   lobby:         { name: '診療報酬アップ陳情', cost: 5, lag: 0, desc: '運が良ければ臨時収入（何度でも挑戦可）', flavor: 'ダメ元で、お願いしてみる。', repeatable: true, cooldown: 2 },
 };
@@ -915,7 +915,7 @@ function LaneRow({ lane, demand, capacity, gauge, units, selectedUnitId, onSelec
           </span>
         </div>
         <span className="text-xs font-mono text-emerald-800/60 tabular-nums">
-          需要{Math.round(demand)} / 処理力{Math.round(capacity)}
+          需要{demand.toFixed(1)} / 処理力{capacity.toFixed(1)}
         </span>
       </div>
       <div className="relative h-2.5 rounded-full bg-emerald-50 overflow-hidden mb-2">
